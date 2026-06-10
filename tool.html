@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Awareness Poster Overlay Tool</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f7;
+    color: #1d1d1f;
+    min-height: 100vh;
+  }
+  .app {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 20px;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+  }
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+  }
+  header p {
+    font-size: 13px;
+    color: #6e6e73;
+    margin: 4px 0 0;
+  }
+  .canvas-area {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e5e5e7;
+    padding: 20px;
+    min-height: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .drop-zone {
+    width: 100%;
+    min-height: 460px;
+    border: 2px dashed #c7c7cc;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: #0071e3;
+    background: #f0f7ff;
+  }
+  .drop-zone svg {
+    width: 56px;
+    height: 56px;
+    color: #8e8e93;
+    margin-bottom: 16px;
+  }
+  .drop-zone h2 {
+    font-size: 17px;
+    font-weight: 500;
+    margin: 0 0 8px;
+  }
+  .drop-zone p {
+    font-size: 14px;
+    color: #6e6e73;
+    margin: 0;
+  }
+  #fileInput { display: none; }
+  .canvas-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  canvas#previewCanvas {
+    max-width: 100%;
+    max-height: 75vh;
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    cursor: move;
+  }
+  .controls {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e5e5e7;
+    padding: 20px;
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+  }
+  .controls h3 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6e6e73;
+    margin: 0 0 12px;
+  }
+  .controls .group {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f0f0f2;
+  }
+  .controls .group:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: #1d1d1f;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  select, input[type="text"], textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #d2d2d7;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    background: white;
+    color: #1d1d1f;
+  }
+  textarea {
+    resize: vertical;
+    min-height: 60px;
+  }
+  select:focus, input:focus, textarea:focus {
+    outline: none;
+    border-color: #0071e3;
+    box-shadow: 0 0 0 3px rgba(0,113,227,0.15);
+  }
+  .row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .row > * { flex: 1; }
+  input[type="range"] {
+    width: 100%;
+    accent-color: #0071e3;
+  }
+  input[type="color"] {
+    width: 100%;
+    height: 36px;
+    padding: 2px;
+    border: 1px solid #d2d2d7;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .slider-row input[type="range"] { flex: 1; }
+  .slider-row .value {
+    font-size: 12px;
+    color: #6e6e73;
+    min-width: 36px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .position-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+  }
+  .pos-btn {
+    padding: 8px;
+    border: 1px solid #d2d2d7;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+  .pos-btn:hover { background: #f5f5f7; }
+  .pos-btn.active {
+    background: #0071e3;
+    color: white;
+    border-color: #0071e3;
+  }
+  .suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .suggestion {
+    padding: 8px 10px;
+    background: #f5f5f7;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1.3;
+    text-align: left;
+    color: #1d1d1f;
+    transition: all 0.15s;
+  }
+  .suggestion:hover {
+    background: #e8f0fe;
+    border-color: #0071e3;
+  }
+  button.primary {
+    width: 100%;
+    padding: 12px;
+    background: #0071e3;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button.primary:hover { background: #0077ed; }
+  button.primary:disabled {
+    background: #c7c7cc;
+    cursor: not-allowed;
+  }
+  button.secondary {
+    width: 100%;
+    padding: 8px;
+    background: white;
+    color: #0071e3;
+    border: 1px solid #d2d2d7;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  button.secondary:hover { background: #f5f5f7; }
+  .gallery {
+    width: 100%;
+    margin-bottom: 24px;
+  }
+  .gallery h3 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6e6e73;
+    margin: 0 0 12px;
+  }
+  .gallery-section {
+    margin-bottom: 20px;
+  }
+  .gallery-section-heading {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin: 0 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #e5e5e7;
+  }
+  .gallery-count {
+    font-weight: 400;
+    color: #8e8e93;
+    font-size: 12px;
+  }
+  /* 5 columns × 2 rows visible, scrollable horizontally */
+  .gallery-scroller {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(2, auto);
+    grid-auto-columns: calc((100% - 8 * 8px) / 5);
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 8px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    scrollbar-color: #c7c7cc transparent;
+  }
+  .gallery-scroller::-webkit-scrollbar { height: 8px; }
+  .gallery-scroller::-webkit-scrollbar-track { background: transparent; }
+  .gallery-scroller::-webkit-scrollbar-thumb {
+    background: #c7c7cc;
+    border-radius: 4px;
+  }
+  .gallery-scroller::-webkit-scrollbar-thumb:hover { background: #8e8e93; }
+  @media (max-width: 700px) {
+    .gallery-scroller { grid-auto-columns: calc((100% - 4 * 8px) / 3); }
+  }
+  .gallery-item {
+    border: 1px solid #e5e5e7;
+    border-radius: 8px;
+    padding: 6px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    scroll-snap-align: start;
+  }
+  .gallery-item:hover {
+    border-color: #0071e3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  .gallery-item.missing {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .gallery-thumb {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    border-radius: 4px;
+    background: #f5f5f7;
+  }
+  .gallery-thumb-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #c7c7cc;
+    font-size: 24px;
+  }
+  .gallery-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #1d1d1f;
+    line-height: 1.25;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .gallery-sublabel {
+    font-size: 10px;
+    color: #8e8e93;
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .divider {
+    text-align: center;
+    color: #8e8e93;
+    font-size: 12px;
+    margin: 8px 0 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .checkbox-row input { width: auto; }
+  .checkbox-row label { margin: 0; font-weight: 400; }
+  .toggle-row {
+    display: flex;
+    gap: 4px;
+    background: #f0f0f2;
+    border-radius: 6px;
+    padding: 3px;
+  }
+  .toggle-btn {
+    flex: 1;
+    padding: 6px;
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    color: #6e6e73;
+  }
+  .toggle-btn.active {
+    background: white;
+    color: #1d1d1f;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .hint {
+    font-size: 12px;
+    color: #6e6e73;
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Awareness Poster Overlay Tool</h1>
+      <p>Drop a poster, add your message, download for digital signage</p>
+    </div>
+  </header>
+
+  <div class="canvas-area" id="canvasArea">
+    <div id="initialView" style="width:100%;">
+      <div class="gallery" id="gallery">
+        <h3>Poster library</h3>
+        <div class="gallery-grid" id="galleryGrid"></div>
+        <div style="margin-top: 12px; font-size: 13px; text-align: right;">
+          <a href="https://mimecastsupport.zendesk.com/hc/en-us/articles/36987080581267-Awareness-Training-Supplemental-Materials-by-Module" target="_blank" rel="noopener" style="color: #0071e3; text-decoration: none;">More posters on Mimecast Support →</a>
+        </div>
+      </div>
+      <div class="divider">Or upload your own</div>
+      <div class="drop-zone" id="dropZone" style="min-height: 200px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <h2>Drop a poster image here</h2>
+        <p>Or click to browse — JPG or PNG</p>
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*">
+    <div class="canvas-wrap" id="canvasWrap" style="display:none;">
+      <canvas id="previewCanvas"></canvas>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="group">
+      <h3>Topic</h3>
+      <select id="topicSelect">
+        <option value="">Choose a topic…</option>
+        <option value="phishing">Phishing</option>
+        <option value="passwords">Passwords</option>
+        <option value="office_hygiene">Office Hygiene</option>
+        <option value="info_protection">Information Protection</option>
+        <option value="data_motion">Data in Motion</option>
+        <option value="insider">Insider Threat / See Something</option>
+        <option value="hipaa">HIPAA</option>
+        <option value="devsecops">Dev Sec Ops</option>
+        <option value="custom">Custom (write your own)</option>
+      </select>
+      <div class="suggestions" id="suggestions"></div>
+    </div>
+
+    <div class="group">
+      <h3>Message</h3>
+      <label for="headline">Headline</label>
+      <textarea id="headline" placeholder="Your main message"></textarea>
+      <div class="checkbox-row">
+        <input type="checkbox" id="showSubtitle">
+        <label for="showSubtitle">Add a subtitle line</label>
+      </div>
+      <textarea id="subtitle" placeholder="Optional smaller second line" style="display:none; margin-top:8px;"></textarea>
+    </div>
+
+    <div class="group">
+      <h3>Position</h3>
+      <div class="position-buttons">
+        <button class="pos-btn" data-pos="top">Top</button>
+        <button class="pos-btn" data-pos="middle">Middle</button>
+        <button class="pos-btn active" data-pos="bottom">Bottom</button>
+      </div>
+      <div class="hint">Or drag the text on the poster</div>
+    </div>
+
+    <div class="group">
+      <h3>Text style</h3>
+      <label>Headline size</label>
+      <div class="slider-row">
+        <input type="range" id="fontSize" min="20" max="160" value="50">
+        <span class="value" id="fontSizeVal">50</span>
+      </div>
+      <label style="margin-top:10px;">Text colour</label>
+      <input type="color" id="textColor" value="#ffffff">
+    </div>
+
+    <div class="group">
+      <h3>Background bar</h3>
+      <div class="toggle-row" id="bgMode">
+        <button class="toggle-btn" data-mode="off">Off</button>
+        <button class="toggle-btn active" data-mode="bar">Bar</button>
+        <button class="toggle-btn" data-mode="full">Full</button>
+      </div>
+      <label style="margin-top:10px;">Bar colour</label>
+      <input type="color" id="bgColor" value="#000000">
+      <label style="margin-top:10px;">Opacity</label>
+      <div class="slider-row">
+        <input type="range" id="bgOpacity" min="0" max="100" value="55">
+        <span class="value" id="bgOpacityVal">55%</span>
+      </div>
+    </div>
+
+    <div class="group">
+      <button class="primary" id="downloadBtn" disabled>Download PNG</button>
+      <button class="secondary" id="resetBtn">Load a different poster</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Map section names to message topic keys
+const SECTION_TOPIC_MAP = {
+  "Phishing": "phishing",
+  "Information Protection": "info_protection",
+  "Data in Motion": "data_motion",
+  "Passwords": "passwords",
+  "Office Hygiene": "office_hygiene",
+  "Special Topics": "insider",
+  "HIPAA": "hipaa",
+  "Dev Sec Ops": "devsecops"
+};
+
+const SECTION_ORDER = ["Phishing", "Information Protection", "Data in Motion",
+  "Passwords", "Office Hygiene", "Special Topics", "HIPAA", "Dev Sec Ops"];
+
+const POSTER_LIBRARY = [
+  { section: "Phishing", title: "Free Cruise for Two (M1)", topic: "Ransomware",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051222&c=601905&h=50c8725db80cf232966f" },
+  { section: "Phishing", title: "Smish Smash (M10)", topic: "SMiShing / BYOD",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051436&c=601905&h=c3cc4c2bb86016381a45" },
+  { section: "Phishing", title: "Gone Vishing (M14)", topic: "Vishing",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051233&c=601905&h=d6b25010f86b5d32f1bc" },
+  { section: "Phishing", title: "Great Time in Cabo (M18)", topic: "Wire Transfer Fraud",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051435&c=601905&h=ce97c95c4f4daa3f7a73" },
+  { section: "Phishing", title: "Hook, Line and Sinker (M19)", topic: "CEO Fraud",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051200&c=601905&h=ea0fee55a6621f3ef814" },
+  { section: "Phishing", title: "My Buddy Lynn (M30)", topic: "Impersonation Attack",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112052982&c=601905&h=608733297a57a79dadaf" },
+  { section: "Phishing", title: "Four Alarm Fire (M37)", topic: "Whaling",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=117735345&c=601905&h=df72b0d9d7d8fe616b05" },
+  { section: "Phishing", title: "Down the Rabbit Hole (M39)", topic: "Click Bait",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112052987&c=601905&h=49479847b5c97c9dd2f0" },
+  { section: "Phishing", title: "Dueling Laptops (M41)", topic: "Browser Pop-up",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=118859749&c=601905&h=9cb2bc72cea10d063bcb" },
+  { section: "Phishing", title: "Pay the People (M42)", topic: "Supply Chain Attack",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=118859747&c=601905&h=ca0c080a419b0da086aa" },
+  { section: "Phishing", title: "Bank Issues (M44)", topic: "Spoof Login",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=118859756&c=601905&h=92fee7f9c26dbb4c243e" },
+  { section: "Phishing", title: "Talking in Riddles (M45)", topic: "Vishing",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=118859752&c=601905&h=3b0b29129e179a2244df" },
+  { section: "Phishing", title: "Careful Where You Click (M46)", topic: "Ransomware",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=118859755&c=601905&h=ba248ae8ea4633405d5a" },
+  { section: "Phishing", title: "Dinner's on You (M47)", topic: "Credential Harvesting",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=118859754&c=601905&h=5e5f24a42d4a7e253e24" },
+  { section: "Phishing", title: "Everybody Needs to Know (M49)", topic: "Spoofed Websites / Holiday Shopping",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=118859750&c=601905&h=e4bd7dec73c6c1f3a767" },
+  { section: "Phishing", title: "Doug Donates (M50)", topic: "Fake Charities / Work From Home",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=118859745&c=601905&h=39f295aa914013683561" },
+  { section: "Phishing", title: "Jada's Fun Run (M52)", topic: "Reconnaissance and Weaponization",
+    url: "https://mimecast.my.salesforce.com/sfc/p/1N000001DMVp/a/3l000000ObOq/VwPNx37jAw.At1glw62aaqiFhEiX7GDuR05xx2IwanY" },
+  { section: "Phishing", title: "Bring Your Doug to Work (M54)", topic: "Vishing",
+    url: "https://mimecast.my.salesforce.com/sfc/p/1N000001DMVp/a/3l000000ObPD/Pv888NEHuyCqAi4zPS8jEZ4y5RQZCWYitlAg09aXcOg" },
+  { section: "Phishing", title: "Totally Hunter (M57)", topic: "Social Media Impersonation",
+    url: "https://mimecast.my.salesforce.com/sfc/p/1N000001DMVp/a/3l000000ObPI/3bwF52fMbwRV9noRcD5nvQkq8azurcfqqod.wTMy7tc" },
+  { section: "Phishing", title: "Your Gift Has Shipped (M58)", topic: "Spoofed Notifications",
+    url: "https://mimecast.my.salesforce.com/sfc/p/1N000001DMVp/a/3l000000ObP8/U5wJMTG8sTkAXnwyZOTRS9gZ7ruwNADQ_fAXMp4enyU" },
+  { section: "Phishing", title: "Doug is my Co-Pilot (M59)", topic: "Smishing",
+    url: "https://mimecast.my.salesforce.com/sfc/p/1N000001DMVp/a/3l000000ObPc/tDsmG0GniAmOCvFjy8g_2BeqpFOTP3vinsT5v8i87FA" },
+  { section: "Phishing", title: "Deepfake (M60)", topic: "Deepfake",
+    url: "https://mimecast.my.salesforce.com/sfc/p/1N000001DMVp/a/3l000000ObPm/UTn25Ci0yGvS8BYRjZB4s06zuPHWP2vkfwHIqX064z4" },
+
+  { section: "Information Protection", title: "Go Grande (M4)", topic: "Stolen Laptop",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051462&c=601905&h=901bc7ad538d3eaf4545" },
+  { section: "Information Protection", title: "Keys to the Castle (M6)", topic: "Privileged User",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112050975&c=601905&h=d868c0dbfe4cdb298aa1" },
+  { section: "Information Protection", title: "Everybody Say Simpson (M9)", topic: "Social Media",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051205&c=601905&h=fbd9209a2bded7d120ba" },
+  { section: "Information Protection", title: "Let it Fly (M11)", topic: "Spoken / Sensitive Information",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051210&c=601905&h=3e4446de275339004270" },
+  { section: "Information Protection", title: "Ping Pong (M13)", topic: "Public WiFi",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051098&c=601905&h=157ea3e158b1a582a841" },
+  { section: "Information Protection", title: "Like Riding a Bike (M23)", topic: "Know Your Audience",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051441&c=601905&h=73d1a1f27b44410e6820" },
+  { section: "Information Protection", title: "Ring the Bell (M28)", topic: "Credit Card / PCI",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=119151207&c=601905&h=aaaac6af587b826cc5ef" },
+  { section: "Information Protection", title: "Who Wants Ice Cream (M29)", topic: "Stolen Laptop",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112052997&c=601905&h=24da3c5b0dc6ba51e017" },
+  { section: "Information Protection", title: "Special Glasses (M32)", topic: "Inadvertent Insider Threat",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112052980&c=601905&h=db33b6fc9758c57c213d" },
+  { section: "Information Protection", title: "Rainbows and Unicorns (M38)", topic: "Identity Theft",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112052874&c=601905&h=107d0217765aaf1b0214" },
+  { section: "Information Protection", title: "Zero Trust (M40)", topic: "Zero Trust",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=118859753&c=601905&h=fac735da24f256de4052" },
+  { section: "Information Protection", title: "Work from Home (M51)", topic: "Work from Home Overview",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=118859751&c=601905&h=e9db72664a84bc57852b" },
+  { section: "Information Protection", title: "Congratulations, Hunter (M55)", topic: "BYOD",
+    url: "https://mimecast.my.salesforce.com/sfc/p/1N000001DMVp/a/3l000000ObQG/Td0f0SLTlbDIHbUJFLgziVjRznX3B1YYj0aiDWtE55U" },
+  { section: "Information Protection", title: "Birthday Wishes (M61)", topic: "Spoken Information",
+    url: "https://mimecast.my.salesforce.com/sfc/p/1N000001DMVp/a/3l000000ObQC/k2AmDJA5my5Y3BhivWA5Al3yS4cy.mOUccAalL4L7aI" },
+  { section: "Information Protection", title: "IoT Makes Me Nervous (M63)", topic: "IoT",
+    url: "https://mimecast.my.salesforce.com/sfc/p/1N000001DMVp/a/3l000000ObQV/kgJQF46N_T732o34n6TBJLFwv_GAbekPAR1e2LsixZg" },
+
+  { section: "Data in Motion", title: "Smart Money's on This Guy (M3)", topic: "Unknown Media",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051088&c=601905&h=2513eac113bc020752b3" },
+  { section: "Data in Motion", title: "The Whole Enchilada (M12)", topic: "Email Blast / Inadvertent Leaks",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051461&c=601905&h=f1a61296165d3172c978" },
+  { section: "Data in Motion", title: "Drop it Like it's Hot (M17)", topic: "My Cloud Storage",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051225&c=601905&h=346fa424af9a58f870af" },
+  { section: "Data in Motion", title: "Claire Time (M22)", topic: "Personal Email",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051218&c=601905&h=d0dc1d4645d3dd16445c" },
+  { section: "Data in Motion", title: "Sunset and Beaches (M35)", topic: "Inadvertent Data Exposure",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112052980&c=601905&h=db33b6fc9758c57c213d" },
+  { section: "Data in Motion", title: "For the Kids (M36)", topic: "Infected Device",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112053001&c=601905&h=8c8f9be91819749364f0" },
+
+  { section: "Passwords", title: "Password Redux (M2)", topic: "Password Mistakes",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051450&c=601905&h=8d0159885d989cc3b706" },
+  { section: "Passwords", title: "No Picnic (M8)", topic: "Same Password",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112050981&c=601905&h=aad53bbfd8e7feb41f73" },
+  { section: "Passwords", title: "You Had Me at Hello (M24)", topic: "Strong Password",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112050976&c=601905&h=e9a32324e9dbb698fa11" },
+  { section: "Passwords", title: "Cracked Like an Egg (M31)", topic: "Brute Force Attack",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112053120&c=601905&h=3db1149b279a818bd1b6" },
+
+  { section: "Office Hygiene", title: "Cup of Coffee (M5)", topic: "Exposed Screen",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051217&c=601905&h=f30feff23685f8e488f3" },
+  { section: "Office Hygiene", title: "The Phoenix Always Rises (M7)", topic: "Physical Access / Tailgating",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=119157930&c=601905&h=f6ed3e53e9b676b3abf9" },
+  { section: "Office Hygiene", title: "Thumb War (M16)", topic: "Responsible Printing",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112050855&c=601905&h=4dcceeca2e1c254595e9" },
+  { section: "Office Hygiene", title: "Claire's Key Card (M20)", topic: "Company Key Card",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112050854&c=601905&h=4114b081fdc1d1c8be4f" },
+  { section: "Office Hygiene", title: "Pizza Economics (M21)", topic: "Clean Desk",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051095&c=601905&h=729d3c20c2d5bc604ebc" },
+  { section: "Office Hygiene", title: "It's Trash, Man (M25)", topic: "Use of Shredder",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051089&c=601905&h=eb74d13cba21d3217a18" },
+  { section: "Office Hygiene", title: "The Doug Show (M33)", topic: "Unvetted App Download",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112053006&c=601905&h=c3633e5dd8d4b4a65d34" },
+  { section: "Office Hygiene", title: "Buggin' Out (M34)", topic: "Piggybacking",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112053003&c=601905&h=a5ff5d96dc00008c263c" },
+  { section: "Office Hygiene", title: "Like a Rock Star (M43)", topic: "Printed Information",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=118859748&c=601905&h=e19a646889c8de9eafb3" },
+  { section: "Office Hygiene", title: "Appreciate the Intel (M48)", topic: "Shoulder Surfing",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=118859746&c=601905&h=302a45fbe96554c0421f" },
+  { section: "Office Hygiene", title: "Team of Three (M53)", topic: "Virtual Meeting Hygiene",
+    url: "https://mimecast.my.salesforce.com/sfc/p/1N000001DMVp/a/3l000000ObRO/1QzHnnWgZ3FKXqxXJh31ZLpJZ.CM7kFuLimSrCH8_uk" },
+  { section: "Office Hygiene", title: "Doug's Lullaby (M56)", topic: "Stress and Fatigue",
+    url: "https://mimecast.my.salesforce.com/sfc/p/1N000001DMVp/a/3l000000ObRT/gE5VGFXjZIRnbRNvN.oMYtX4a6lVL4vhYRmIYSQg0hI" },
+  { section: "Office Hygiene", title: "Always Hit on 16 (M62)", topic: "Shoulder Surfing",
+    url: "https://mimecast.my.salesforce.com/sfc/p/1N000001DMVp/a/3l000000ObRY/GUcMaUToevwZabjyG1587LiwBPzPUJQ5gFpi8o7Bnaw" },
+
+  { section: "Special Topics", title: "See Something Say Something (M15)", topic: "Insider Threat",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112050969&c=601905&h=809b1ef1dfd565509578" },
+  { section: "Special Topics", title: "It's a Machine (M26)", topic: "Card Reader / PCI",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051209&c=601905&h=273ed0443c7cbb3565eb" },
+
+  { section: "HIPAA", title: "Final Roster (HM1)", topic: "Reporting Breaches",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112059436&c=601905&h=bb5cfd8af7970f107d5d" },
+  { section: "HIPAA", title: "It's Contagious (HM2)", topic: "Improper Access",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112050752&c=601905&h=a900a88cfd176aab324c" },
+  { section: "HIPAA", title: "My Cousin Kiley (HM3)", topic: "Social Media Posting",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112059437&c=601905&h=37e48930a1297bf046cb" },
+  { section: "HIPAA", title: "Not the Patient (HM4)", topic: "Authenticate",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112059435&c=601905&h=650ce412235ef1783af0" },
+  { section: "HIPAA", title: "Special Agent Doug (HM5)", topic: "Locked Screen",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112059438&c=601905&h=cad8c535c1d0a4e54b83" },
+  { section: "HIPAA", title: "You Have a Hunter? (HM6)", topic: "Spoken Disclosure",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112059434&c=601905&h=9e8038d8d131642416d3" },
+
+  { section: "Dev Sec Ops", title: "Glitch in the Code (DSO101)", topic: "Unvetted Code",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051455&c=601905&h=327ea9b9d1e64a0847eb" },
+  { section: "Dev Sec Ops", title: "Push the Patch (DSO102)", topic: "Patching",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112050972&c=601905&h=55d448dd51e322ecca91" },
+  { section: "Dev Sec Ops", title: "Development vs. Production (DSO103)", topic: "Dev vs. Production",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112050987&c=601905&h=e5ab33f07bb5607267a6" },
+  { section: "Dev Sec Ops", title: "Admin Admin (DSO104)", topic: "Login Credentials",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051446&c=601905&h=d8477a391c2f31aeafba" },
+  { section: "Dev Sec Ops", title: "The Test Data (DSO105)", topic: "Test Data",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112050966&c=601905&h=d77b300ae5e02a1ab589" },
+  { section: "Dev Sec Ops", title: "It's in the Code (DSO106)", topic: "Hiding in the Code",
+    url: "https://601905.app.netsuite.com/core/media/media.nl?id=112051204&c=601905&h=b439f17b77eb2cd090ae" }
+];
+
+const MESSAGES = {
+  phishing: [
+    "Think before you click.",
+    "If it feels off, report it.",
+    "Hover before you click — check the link first."
+  ],
+  passwords: [
+    "Long, strong, and yours alone.",
+    "Never share your password — not even with IT.",
+    "Use a passphrase, not a password."
+  ],
+  office_hygiene: [
+    "Step away? Lock the screen.",
+    "Clear desk, clear conscience.",
+    "No badge, no entry — don't hold the door."
+  ],
+  info_protection: [
+    "Loose lips sink ships — and data.",
+    "Public Wi-Fi is never private.",
+    "Know who's listening before you talk shop."
+  ],
+  data_motion: [
+    "Personal email isn't for work data.",
+    "Check the recipient before you hit send.",
+    "Cloud storage approved by IT only."
+  ],
+  insider: [
+    "See something. Say something.",
+    "Trust, but verify.",
+    "If it seems wrong, it probably is."
+  ],
+  hipaa: [
+    "Patient data stays with the care team.",
+    "Authenticate before you share.",
+    "Need to know — and only those who do."
+  ],
+  devsecops: [
+    "Patch early, patch often.",
+    "Production data stays in production.",
+    "Secrets don't belong in code."
+  ],
+  custom: []
+};
+
+const state = {
+  image: null,
+  imageWidth: 0,
+  imageHeight: 0,
+  headline: "",
+  subtitle: "",
+  showSubtitle: false,
+  fontSize: 50,
+  textColor: "#ffffff",
+  bgMode: "bar",
+  bgColor: "#000000",
+  bgOpacity: 55,
+  position: "bottom",
+  customY: null,
+  isDragging: false,
+  dragOffsetY: 0
+};
+
+const canvas = document.getElementById('previewCanvas');
+const ctx = canvas.getContext('2d');
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const canvasWrap = document.getElementById('canvasWrap');
+const downloadBtn = document.getElementById('downloadBtn');
+const initialView = document.getElementById('initialView');
+const galleryGrid = document.getElementById('galleryGrid');
+
+// Build the gallery — grouped by section, 2 rows × 5 cols visible, scroll horizontally for more
+SECTION_ORDER.forEach((sectionName) => {
+  const sectionPosters = POSTER_LIBRARY.filter(p => p.section === sectionName);
+  if (sectionPosters.length === 0) return;
+
+  const sectionEl = document.createElement('div');
+  sectionEl.className = 'gallery-section';
+
+  const heading = document.createElement('h4');
+  heading.className = 'gallery-section-heading';
+  heading.innerHTML = `${sectionName} <span class="gallery-count">(${sectionPosters.length})</span>`;
+  sectionEl.appendChild(heading);
+
+  const scroller = document.createElement('div');
+  scroller.className = 'gallery-scroller';
+
+  sectionPosters.forEach((poster) => {
+    const item = document.createElement('div');
+    item.className = 'gallery-item';
+    item.title = `${poster.title} — ${poster.topic}`;
+
+    const img = document.createElement('img');
+    img.className = 'gallery-thumb';
+    img.alt = poster.title;
+    img.loading = 'lazy';
+    img.referrerPolicy = 'no-referrer';
+    img.src = poster.url;
+    img.onerror = () => {
+      item.classList.add('missing');
+      img.style.display = 'none';
+      const placeholder = document.createElement('div');
+      placeholder.className = 'gallery-thumb gallery-thumb-placeholder';
+      placeholder.textContent = '✕';
+      item.insertBefore(placeholder, item.firstChild);
+    };
+
+    const label = document.createElement('div');
+    label.className = 'gallery-label';
+    label.textContent = poster.title;
+
+    const sublabel = document.createElement('div');
+    sublabel.className = 'gallery-sublabel';
+    sublabel.textContent = poster.topic;
+
+    item.appendChild(img);
+    item.appendChild(label);
+    item.appendChild(sublabel);
+    item.addEventListener('click', () => {
+      const topicKey = SECTION_TOPIC_MAP[poster.section] || '';
+      loadImageFromUrl(poster.url, topicKey);
+    });
+    scroller.appendChild(item);
+  });
+
+  sectionEl.appendChild(scroller);
+  galleryGrid.appendChild(sectionEl);
+});
+
+function loadImageFromUrl(url, topic) {
+  // Try with CORS first so canvas export will work if the host allows it
+  const tryLoad = (useCors) => {
+    const img = new Image();
+    if (useCors) img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      handleImageLoaded(img);
+      if (topic) {
+        const sel = document.getElementById('topicSelect');
+        sel.value = topic;
+        sel.dispatchEvent(new Event('change'));
+      }
+    };
+    img.onerror = () => {
+      if (useCors) {
+        // CORS attempt failed — fall back to non-CORS load (will display fine, but canvas will be tainted)
+        tryLoad(false);
+      } else {
+        alert('Could not load that image. The source may be unreachable or blocking access.');
+      }
+    };
+    img.src = url;
+  };
+  tryLoad(true);
+}
+
+function handleImageLoaded(img) {
+  state.image = img;
+  state.imageWidth = img.width;
+  state.imageHeight = img.height;
+  canvas.width = img.width;
+  canvas.height = img.height;
+  initialView.style.display = 'none';
+  canvasWrap.style.display = 'flex';
+  downloadBtn.disabled = false;
+  render();
+}
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('dragover');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) loadImage(file);
+});
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) loadImage(file);
+});
+
+function loadImage(file) {
+  if (!file.type.startsWith('image/')) {
+    alert('Please drop an image file (JPG or PNG)');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => handleImageLoaded(img);
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('topicSelect').addEventListener('change', (e) => {
+  const topic = e.target.value;
+  const suggestionsEl = document.getElementById('suggestions');
+  suggestionsEl.innerHTML = '';
+  if (topic && MESSAGES[topic] && MESSAGES[topic].length > 0) {
+    MESSAGES[topic].forEach(msg => {
+      const btn = document.createElement('button');
+      btn.className = 'suggestion';
+      btn.textContent = msg;
+      btn.onclick = () => {
+        document.getElementById('headline').value = msg;
+        state.headline = msg;
+        render();
+      };
+      suggestionsEl.appendChild(btn);
+    });
+  }
+});
+
+document.getElementById('headline').addEventListener('input', (e) => {
+  state.headline = e.target.value;
+  render();
+});
+
+document.getElementById('showSubtitle').addEventListener('change', (e) => {
+  state.showSubtitle = e.target.checked;
+  document.getElementById('subtitle').style.display = e.target.checked ? 'block' : 'none';
+  render();
+});
+
+document.getElementById('subtitle').addEventListener('input', (e) => {
+  state.subtitle = e.target.value;
+  render();
+});
+
+document.getElementById('fontSize').addEventListener('input', (e) => {
+  state.fontSize = parseInt(e.target.value);
+  document.getElementById('fontSizeVal').textContent = state.fontSize;
+  render();
+});
+
+document.getElementById('textColor').addEventListener('input', (e) => {
+  state.textColor = e.target.value;
+  render();
+});
+
+document.getElementById('bgColor').addEventListener('input', (e) => {
+  state.bgColor = e.target.value;
+  render();
+});
+
+document.getElementById('bgOpacity').addEventListener('input', (e) => {
+  state.bgOpacity = parseInt(e.target.value);
+  document.getElementById('bgOpacityVal').textContent = state.bgOpacity + '%';
+  render();
+});
+
+document.querySelectorAll('.pos-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.position = btn.dataset.pos;
+    state.customY = null;
+    render();
+  });
+});
+
+document.querySelectorAll('#bgMode .toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#bgMode .toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.bgMode = btn.dataset.mode;
+    render();
+  });
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  state.image = null;
+  state.customY = null;
+  initialView.style.display = 'block';
+  canvasWrap.style.display = 'none';
+  downloadBtn.disabled = true;
+  fileInput.value = '';
+});
+
+// Drag text on canvas
+canvas.addEventListener('mousedown', (e) => {
+  if (!state.image || !state.headline) return;
+  const rect = canvas.getBoundingClientRect();
+  const scale = canvas.width / rect.width;
+  const y = (e.clientY - rect.top) * scale;
+  const textY = getTextY();
+  const blockHeight = getTextBlockHeight();
+  if (y >= textY - blockHeight/2 - 20 && y <= textY + blockHeight/2 + 20) {
+    state.isDragging = true;
+    state.dragOffsetY = y - textY;
+    canvas.style.cursor = 'grabbing';
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (!state.isDragging) return;
+  const rect = canvas.getBoundingClientRect();
+  const scale = canvas.width / rect.width;
+  const y = (e.clientY - rect.top) * scale;
+  state.customY = Math.max(50, Math.min(canvas.height - 50, y - state.dragOffsetY));
+  // Clear position button active state when dragging
+  document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('active'));
+  render();
+});
+
+canvas.addEventListener('mouseup', () => {
+  state.isDragging = false;
+  canvas.style.cursor = 'move';
+});
+
+canvas.addEventListener('mouseleave', () => {
+  state.isDragging = false;
+  canvas.style.cursor = 'move';
+});
+
+function getTextY() {
+  if (state.customY !== null) return state.customY;
+  const h = canvas.height;
+  if (state.position === 'top') return h * 0.15;
+  if (state.position === 'bottom') return h * 0.85;
+  return h * 0.5;
+}
+
+function getTextBlockHeight() {
+  const lines = wrapText(state.headline, canvas.width * 0.85, state.fontSize, '500').length;
+  let height = lines * state.fontSize * 1.2;
+  if (state.showSubtitle && state.subtitle.trim()) {
+    const subSize = Math.round(state.fontSize * 0.5);
+    const subLines = wrapText(state.subtitle, canvas.width * 0.85, subSize, '400').length;
+    height += subLines * subSize * 1.3 + state.fontSize * 0.3;
+  }
+  return height;
+}
+
+function wrapText(text, maxWidth, fontSize, weight) {
+  ctx.font = `${weight} ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+  const words = text.split(' ');
+  const lines = [];
+  let currentLine = '';
+  for (const word of words) {
+    const testLine = currentLine ? currentLine + ' ' + word : word;
+    if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+}
+
+function hexToRgba(hex, opacity) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${opacity/100})`;
+}
+
+function render() {
+  if (!state.image) return;
+  ctx.drawImage(state.image, 0, 0);
+  if (!state.headline.trim()) return;
+
+  const headlineLines = wrapText(state.headline, canvas.width * 0.85, state.fontSize, '500');
+  const subSize = Math.round(state.fontSize * 0.5);
+  const subtitleLines = (state.showSubtitle && state.subtitle.trim())
+    ? wrapText(state.subtitle, canvas.width * 0.85, subSize, '400') : [];
+
+  const headlineLineHeight = state.fontSize * 1.2;
+  const subtitleLineHeight = subSize * 1.3;
+  const headlineHeight = headlineLines.length * headlineLineHeight;
+  const subtitleHeight = subtitleLines.length * subtitleLineHeight;
+  const gap = subtitleLines.length > 0 ? state.fontSize * 0.3 : 0;
+  const totalHeight = headlineHeight + gap + subtitleHeight;
+
+  const centerY = getTextY();
+  const topY = centerY - totalHeight / 2;
+
+  // Background
+  if (state.bgMode === 'full') {
+    ctx.fillStyle = hexToRgba(state.bgColor, state.bgOpacity);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  } else if (state.bgMode === 'bar') {
+    const padding = state.fontSize * 0.5;
+    ctx.fillStyle = hexToRgba(state.bgColor, state.bgOpacity);
+    ctx.fillRect(0, topY - padding, canvas.width, totalHeight + padding * 2);
+  }
+
+  // Headline text
+  ctx.fillStyle = state.textColor;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.font = `500 ${state.fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+  headlineLines.forEach((line, i) => {
+    ctx.fillText(line, canvas.width / 2, topY + i * headlineLineHeight);
+  });
+
+  // Subtitle text
+  if (subtitleLines.length > 0) {
+    ctx.font = `400 ${subSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+    const subStart = topY + headlineHeight + gap;
+    subtitleLines.forEach((line, i) => {
+      ctx.fillText(line, canvas.width / 2, subStart + i * subtitleLineHeight);
+    });
+  }
+}
+
+downloadBtn.addEventListener('click', () => {
+  if (!state.image) return;
+  try {
+    const link = document.createElement('a');
+    const filename = `awareness-poster-${Date.now()}.png`;
+    link.download = filename;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (err) {
+    // Most likely a CORS-tainted canvas from an external image source
+    alert(
+      "Couldn't download this poster directly because the image is hosted on an external server that doesn't allow it.\n\n" +
+      "Workaround: download the poster image first (right-click the thumbnail → Save image as), then drag it into this page using the upload area."
+    );
+    console.error('Canvas export failed:', err);
+  }
+});
+</script>
+</body>
+</html>
